@@ -23,9 +23,10 @@ APIKEY = "Token " + APIKEY
 
 
 class snykIssue:
-  def __init__(self, projectName, projectID, severity, title, filename, linenumber):
+  def __init__(self, projectName, projectID, orgID, severity, title, filename, linenumber):
     self.projectName = projectName
     self.projectID = projectID
+    self.orgID = orgID
     self.severity = severity
     self.title = title
     self.filename = filename
@@ -35,6 +36,7 @@ allOrganizations = []
 allOrgIssues = []
 allIssuesWithMetadata = []
 projectIDtoProjectName = {}
+orgIDtoNameMapping = {}
 
 #Grab a list of all organizations related to the given group
 try:
@@ -52,6 +54,11 @@ except reqs.RequestException as ex:
     print("Some issue querying the Snyk API {}".format(ex))
     print("If this error looks abnormal please check https://status.snyk.io/ for any incidents")
 
+
+# Map IDs to names so that later we can store the names as values in place of ID
+
+for org in allOrganizations:
+    orgIDtoNameMapping[org['id']] = org['attributes']['name']
 
 #For each organization in the list
 
@@ -110,17 +117,17 @@ for org in allOrganizations:
                 print("Some issue querying the Snyk API {}".format(ex))
                 print("If this error looks abnormal please check https://status.snyk.io/ for any incidents")
                 continue
-
-        allIssuesWithMetadata.append(snykIssue(projectName, projectID, issue['attributes']['effective_severity_level'], codeIssueresponse['data']['attributes']['title'], codeIssueresponse['data']['attributes']['primaryFilePath'], codeIssueresponse['data']['attributes']['primaryRegion']['startLine']))
-
-
+            
+        allIssuesWithMetadata.append(snykIssue(projectName, projectID, orgIDtoNameMapping.get(orgID), issue['attributes']['effective_severity_level'], codeIssueresponse['data']['attributes']['title'], codeIssueresponse['data']['attributes']['primaryFilePath'], codeIssueresponse['data']['attributes']['primaryRegion']['startLine']))
 
 
-csvFields = ['Project Name', 'Project ID', 'Severity', 'Title', 'File Name', 'Line']
+
+
+csvFields = ['Project Name', 'Project ID', 'Org ID', 'Severity', 'Title', 'File Name', 'Line']
 
 with open('VulnData.csv', 'w') as f:
     csv_writer = csv.writer(f)
     csv_writer.writerow(csvFields)
     for projectIssue in allIssuesWithMetadata:
-        constructRow = [projectIssue.projectName, projectIssue.projectID, projectIssue.severity, projectIssue.title, projectIssue.filename, projectIssue.linenumber]
+        constructRow = [projectIssue.projectName, projectIssue.projectID, projectIssue.orgID, projectIssue.severity, projectIssue.title, projectIssue.filename, projectIssue.linenumber]
         csv_writer.writerow(constructRow)
