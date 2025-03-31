@@ -1,0 +1,55 @@
+{
+    "data": {
+      "attributes": {
+        "columns": [
+          "ISSUE_SEVERITY_RANK",
+          "ISSUE_SEVERITY",
+          "SCORE",
+          "PROBLEM_TITLE",
+          "CVE",
+          "CWE",
+          "PROJECT_NAME",
+          "PROJECT_URL",
+          "EXPLOIT_MATURITY",
+          "AUTOFIXABLE",
+          "FIRST_INTRODUCED",
+          "PRODUCT_NAME",
+          "ISSUE_URL",
+          "ISSUE_STATUS_INDICATOR",
+          "ISSUE_TYPE"
+        ],
+        "dataset": "issues",
+        "destination": {
+          "file_name": "test_export",
+          "type": "snyk"
+        },
+        "filters": {
+          "general": {
+            "orgs": [
+              "2f3d8682-4d92-454d-899f-8acb8eb5704e"
+            ]
+          },
+          "issues": {
+            "introduced_date": {
+              "max": "2024-04-30T00:00:00Z",
+              "min": "2024-04-01T00:00:00Z"
+            }
+          },
+          "projects": {
+            "environment": [
+              "BACKEND",
+              "EXTERNAL"
+            ],
+            "lifecycle": [
+              "PRODUCTION"
+            ]
+          }
+        },
+        "formats": [
+          "csv"
+        ]
+      },
+      "type": "resource"
+    }
+  }
+  
