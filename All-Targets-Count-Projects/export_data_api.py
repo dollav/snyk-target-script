@@ -56,16 +56,21 @@ while True:
             print("Job status is {}, waiting 10 seconds then trying again..".format(status_resp_json['data']['attributes']['status']))
             time.sleep(10)
         else:
+
+            if len(status_resp_json['data']['attributes']['results']) == 0:
+                print("Export API returned 0 results for the query ending run...")
+                break
+            
+            count = 0
+
             for result in status_resp_json['data']['attributes']['results']:
-
-                csv_response = session.get(status_resp_json['data']['attributes']['results'][0]['url'], headers={'Authorization': APIKEY})
+                csv_response = session.get(status_resp_json['data']['attributes']['results'][count]['url'], headers={'Authorization': APIKEY})
                 csv_response.raise_for_status()
-
-                count = 0
 
                 filename = "CSV-" + str(count) + ".csv"
                 with open(filename, 'wb') as file: 
                     file.write(csv_response.content)
+
                 count = count + 1
             break
 
