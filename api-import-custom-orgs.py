@@ -7,6 +7,8 @@ import os
 import csv
 import time
 
+
+
 #Retry logic
 retry_strategy = Retry(
     total=5,  # Maximum number of retries
@@ -17,14 +19,16 @@ retry_strategy = Retry(
 adapter = HTTPAdapter(max_retries=retry_strategy,)
 session = reqs.Session()
 session.mount('https://', adapter)
-urllib3.add_stderr_logger()
+
+
+#urllib3.add_stderr_logger()
 
 APIKEY =  os.getenv("APIKEY")
 TEMPLATE_ORGID = os.getenv("TEMPLATE_ORGID")
 APIKEY = "Token " + APIKEY
 SNYK_GROUP_ID = os.getenv("SNYK_GROUP_ID")
 GIT_OWNER = os.getenv("GIT_OWNER")
-SNYK_API_ENDPOINT= os.getenv("SNYK_API_ENDPOINT")
+SNYK_API_ENDPOINT = os.getenv("SNYK_API_ENDPOINT")
 scmSource = "github-cloud-app"
 
 
@@ -54,13 +58,14 @@ json_entries = {
 
 
 csvData = get_csv_rows_dict("import-data.csv")
+
 for row in csvData:
 
     # swap to this when you have the app name
     # orgName = row['APPLICATION_NAME'] + "-" + row['mappid']
 
     orgName = row["MAP_ID"]
-    checkOrgExistsURL = "https://api.snyk.io/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_GROUP_ID, orgName)
+    checkOrgExistsURL = "https://{}/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_API_ENDPOINT, SNYK_GROUP_ID, orgName)
 
     try:
         responseJSON = session.get(checkOrgExistsURL, headers={'Authorization': APIKEY})
@@ -83,58 +88,58 @@ for row in csvData:
         }
 
         try:
-            urlResponseJSON = session.post("https://api.snyk.io/v1/org", headers={'Authorization': APIKEY, "Content-Type": "application/json"}, data=json.dumps(data))
+            urlResponseJSON = session.post("https:/{}/v1/org".format(SNYK_API_ENDPOINT), headers={'Authorization': APIKEY, "Content-Type": "application/json"}, data=json.dumps(data))
             urlResponseJSON.raise_for_status()
 
             #API endpoints take a moment to update, need to sleep to prevent duplicates
             #This could be improved by keeping a running list of duplicates, then skipping this step when its found in the list
-            time.sleep(5)
+            time.sleep(3)
+
         except reqs.exceptions.RequestException as ex:
             print(f"An error occurred: {ex}")
             continue
     else:
         print("Org already exists, continuing with import")
 
-        
     #Get orgID for the current repo
-        try:
-            getOrgId = session.get("https://api.snyk.io/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_GROUP_ID, orgName), headers={'Authorization': APIKEY})
-            getOrgId.raise_for_status()
-            getOrgId = getOrgId.json()
+    try:
+        getOrgId = session.get("https://{}/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_API_ENDPOINT, SNYK_GROUP_ID, orgName), headers={'Authorization': APIKEY})
+        getOrgId.raise_for_status()
+        getOrgId = getOrgId.json()
             
-            if getOrgId['data']:
-                importingOrgId = getOrgId['data'][0]['id']
-                print(importingOrgId)
-        except reqs.exceptions.RequestException as ex:
-            print(f"An error occurred: {ex}")
-            continue    
+        if getOrgId['data']:
+            importingOrgId = getOrgId['data'][0]['id']
+            print(importingOrgId)
+    except reqs.exceptions.RequestException as ex:
+        print(f"An error occurred: {ex}")
+        continue    
         
 
     #find integration ID for the current repo
-        try:
-            getIntegrationId = session.get("https://api.snyk.io/v1/org/{}/integrations/{}".format(importingOrgId, scmSource), headers={'Authorization': APIKEY})
-            getIntegrationId.raise_for_status()
-            getIntegrationId = getIntegrationId.json()
+    try:
+        getIntegrationId = session.get("https://{}/v1/org/{}/integrations/{}".format(SNYK_API_ENDPOINT, importingOrgId, scmSource), headers={'Authorization': APIKEY})
+        getIntegrationId.raise_for_status()
+        getIntegrationId = getIntegrationId.json()
             
-            if getIntegrationId['id']:
-                importingOrgIntegrationId = getIntegrationId['id']
+        if getIntegrationId['id']:
+            importingOrgIntegrationId = getIntegrationId['id']
 
-        except reqs.exceptions.RequestException as ex:
-            print(f"An error occurred: {ex}")
-            continue    
+    except reqs.exceptions.RequestException as ex:
+        print(f"An error occurred: {ex}")
+        continue    
 
-        #write entry to variable
-        currentEntry = {
-            "orgId": importingOrgId,
-            "integrationId": importingOrgIntegrationId,
-            "target": {
-                "name": row['Repo'],
-                "owner": GIT_OWNER,
-                "branch": ""
-            }
-            }
+    #write entry to variable
+    currentEntry = {
+        "orgId": importingOrgId,
+        "integrationId": importingOrgIntegrationId,
+        "target": {
+            "name": row['Repo'],
+            "owner": GIT_OWNER,
+            "branch": ""
+        }
+    }
 
-        json_entries["targets"].append(currentEntry)
+    json_entries["targets"].append(currentEntry)
 
 #create our file
 try:
