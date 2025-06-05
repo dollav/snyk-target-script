@@ -88,7 +88,7 @@ for row in csvData:
         }
 
         try:
-            urlResponseJSON = session.post("https:/{}/v1/org".format(SNYK_API_ENDPOINT), headers={'Authorization': APIKEY, "Content-Type": "application/json"}, data=json.dumps(data))
+            urlResponseJSON = session.post("https://{}/v1/org".format(SNYK_API_ENDPOINT), headers={'Authorization': APIKEY, "Content-Type": "application/json"}, data=json.dumps(data))
             urlResponseJSON.raise_for_status()
 
             #API endpoints take a moment to update, need to sleep to prevent duplicates
