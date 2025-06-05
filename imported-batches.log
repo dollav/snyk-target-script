@@ -1,0 +1,5 @@
+{"name":"snyk:import-projects-script","hostname":"WGM2P6QWML","pid":41245,"level":30,"message":"Importing batch 1 - 1 out of 6 ","msg":"Kicked off import","time":"2025-06-05T15:35:33.187Z","v":0}
+{"name":"snyk:import-projects-script","hostname":"WGM2P6QWML","pid":42076,"level":30,"message":"Importing batch 1 - 1 out of 6 ","msg":"Kicked off import","time":"2025-06-05T15:36:46.913Z","v":0}
+{"name":"snyk:import-projects-script","hostname":"WGM2P6QWML","pid":42941,"level":30,"message":"Importing batch 1 - 1 out of 6 ","msg":"Kicked off import","time":"2025-06-05T15:41:22.936Z","v":0}
+{"name":"snyk:import-projects-script","hostname":"WGM2P6QWML","pid":43750,"level":30,"message":"Importing batch 1 - 1 out of 6 ","msg":"Kicked off import","time":"2025-06-05T15:41:47.572Z","v":0}
+{"name":"snyk:import-projects-script","hostname":"WGM2P6QWML","pid":43917,"level":30,"message":"Importing batch 6 - 6 out of 6 (skipped 5)","msg":"Kicked off import","time":"2025-06-05T15:42:23.029Z","v":0}
