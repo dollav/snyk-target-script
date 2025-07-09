@@ -1,3 +1,4 @@
+import argparse
 import json
 import requests as reqs
 from urllib3.util import Retry
@@ -7,8 +8,12 @@ import os
 import csv
 import time
 
-
-
+APIKEY = None
+TEMPLATE_ORGID = None
+SNYK_GROUP_ID = None
+GIT_OWNER = None
+SNYK_API_ENDPOINT = None
+SCM_SOURCE = None
 #Retry logic
 retry_strategy = Retry(
     total=5,  # Maximum number of retries
@@ -19,17 +24,7 @@ retry_strategy = Retry(
 adapter = HTTPAdapter(max_retries=retry_strategy,)
 session = reqs.Session()
 session.mount('https://', adapter)
-
-
 #urllib3.add_stderr_logger()
-
-APIKEY =  os.getenv("APIKEY")
-TEMPLATE_ORGID = os.getenv("TEMPLATE_ORGID")
-APIKEY = "Token " + APIKEY
-SNYK_GROUP_ID = os.getenv("SNYK_GROUP_ID")
-GIT_OWNER = os.getenv("GIT_OWNER")
-SNYK_API_ENDPOINT = os.getenv("SNYK_API_ENDPOINT")
-scmSource = "github-cloud-app"
 
 
 def get_csv_rows_dict(filepath):
@@ -51,22 +46,9 @@ def get_csv_rows_dict(filepath):
         print(f"An error occurred: {e}")
         return None
 
+def check_org_exists(orgName):
 
-json_entries = {
-  "targets": []
-}
-
-
-csvData = get_csv_rows_dict("import-data.csv")
-
-for row in csvData:
-
-    # swap to this when you have the app name
-    # orgName = row['APPLICATION_NAME'] + "-" + row['mappid']
-
-    orgName = row["MAP_ID"]
     checkOrgExistsURL = "https://{}/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_API_ENDPOINT, SNYK_GROUP_ID, orgName)
-
     try:
         responseJSON = session.get(checkOrgExistsURL, headers={'Authorization': APIKEY})
         responseJSON.raise_for_status()
@@ -74,7 +56,7 @@ for row in csvData:
     except reqs.RequestException as ex:
         print("Some issue querying the Snyk API, exception: {}".format(ex))
         print("If this error looks abnormal please check https://status.snyk.io/ for any incidents")
-        continue
+
     print(responseJSON)
 
     #If the response data is empty, then create the organization by copying from our template ID
@@ -94,16 +76,107 @@ for row in csvData:
             #API endpoints take a moment to update, need to sleep to prevent duplicates
             #This could be improved by keeping a running list of duplicates, then skipping this step when its found in the list
             time.sleep(3)
-
         except reqs.exceptions.RequestException as ex:
             print(f"An error occurred: {ex}")
-            continue
+            
     else:
         print("Org already exists, continuing with import")
 
+def write_to_json_output(json_output):
+    try:
+        with open("import-data.json", 'w') as f:
+            json.dump(json_entries, f, indent=2)
+        print(f"\nSuccessfully wrote content to output")
+    except IOError as e:
+        print(f"Error writing to file... {e}")
+
+
+def main():
+    """
+    Parses command-line arguments and displays the configured values.
+    """
+    parser = argparse.ArgumentParser(
+        description="A Python program that allows for custom imports from the api import tool"
+    )
+
+    global APIKEY, TEMPLATE_ORGID, SNYK_GROUP_ID, GIT_OWNER, SNYK_API_ENDPOINT, SCM_SOURCE
+
+    # Add required command-line arguments
+    parser.add_argument(
+        "--snyk-api-key",
+        type=str,
+        required=True,
+        help="Your Snyk API Key (e.g., 'your_snyk_api_key_here')."
+    )
+    parser.add_argument(
+        "--template-org-id",
+        type=str,
+        required=True,
+        help="The template organization ID for Snyk (e.g., 'abcdef12-3456-7890-abcd-ef1234567890')."
+    )
+    parser.add_argument(
+        "--snyk-group-id",
+        type=str,
+        required=True,
+        help="The Snyk Group ID (e.g., '12345678-abcd-efgh-ijkl-mnopqrstuvwx')."
+    )
+    parser.add_argument(
+        "--git-owner",
+        type=str,
+        required=True,
+        help="The Git owner (e.g., 'your_github_username_or_org')."
+    )
+    parser.add_argument(
+        "--snyk-api-endpoint",
+        type=str,
+        required=True,
+        help="The Snyk API endpoint (e.g., 'https://api.snyk.io/v1')."
+    )
+    parser.add_argument(
+        "--scm-source",
+        type=str,
+        required=True,
+        help="SCM Source that you are importing repositories from. "
+    )
+    # Parse the arguments provided by the user
+    args = parser.parse_args()
+
+    # Access the arguments and process them
+    APIKEY = "Token " + args.snyk_api_key
+    TEMPLATE_ORGID = args.template_org_id
+    SNYK_GROUP_ID = args.snyk_group_id
+    GIT_OWNER = args.git_owner
+    SNYK_API_ENDPOINT = args.snyk_api_endpoint
+    SCM_SOURCE = args.scm_source 
+
+    print(f"Configured Values:")
+    print(f"APIKEY: {APIKEY}")
+    print(f"TEMPLATE_ORGID: {TEMPLATE_ORGID}")
+    print(f"SNYK_GROUP_ID: {SNYK_GROUP_ID}")
+    print(f"GIT_OWNER: {GIT_OWNER}")
+    print(f"SNYK_API_ENDPOINT: {SNYK_API_ENDPOINT}")
+    print(f"scmSource: {SCM_SOURCE}")
+
+if __name__ == "__main__":
+    main()
+
+
+
+json_entries = {
+  "targets": []
+}
+
+csvData = get_csv_rows_dict("import-data.csv")
+
+for row in csvData:
+
+    # swap to this when you have the app name
+    # orgName = row['APPLICATION_NAME'] + "-" + row['mappid']
+    check_org_exists(row["MAP_ID"])
+ 
     #Get orgID for the current repo
     try:
-        getOrgId = session.get("https://{}/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_API_ENDPOINT, SNYK_GROUP_ID, orgName), headers={'Authorization': APIKEY})
+        getOrgId = session.get("https://{}/rest/groups/{}/orgs?version=2024-10-15&name={}".format(SNYK_API_ENDPOINT, SNYK_GROUP_ID, row["MAP_ID"]), headers={'Authorization': APIKEY})
         getOrgId.raise_for_status()
         getOrgId = getOrgId.json()
             
@@ -117,7 +190,7 @@ for row in csvData:
 
     #find integration ID for the current repo
     try:
-        getIntegrationId = session.get("https://{}/v1/org/{}/integrations/{}".format(SNYK_API_ENDPOINT, importingOrgId, scmSource), headers={'Authorization': APIKEY})
+        getIntegrationId = session.get("https://{}/v1/org/{}/integrations/{}".format(SNYK_API_ENDPOINT, importingOrgId, SCM_SOURCE), headers={'Authorization': APIKEY})
         getIntegrationId.raise_for_status()
         getIntegrationId = getIntegrationId.json()
             
@@ -141,10 +214,4 @@ for row in csvData:
 
     json_entries["targets"].append(currentEntry)
 
-#create our file
-try:
-    with open("import-data.json", 'w') as f:
-        json.dump(json_entries, f, indent=2)
-    print(f"\nSuccessfully wrote content to output")
-except IOError as e:
-    print(f"Error writing to file... {e}")
+write_to_json_output(json_entries)
