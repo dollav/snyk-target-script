@@ -22,6 +22,9 @@ SNYKAPIVERSION = "2024-10-15"
 APIKEY = "Token " + APIKEY
 
 listofTargets = []
+listofProjects = []
+hasBoth = []
+
 count = 0 
 
 
@@ -44,12 +47,23 @@ except reqs.RequestException as ex:
 
 for target in listofTargets:
 
-    projectsResponse = session.get("https://api.snyk.io/rest/orgs/{}/projects?target_id={}&version={}&limit=100".format(ORGID, target['id'],SNYKAPIVERSION), headers={'Authorization': APIKEY})
-    projectResponseJSON = projectsResponse.json()
+    listofProjects = []
+    allProjectsUrl = "https://api.snyk.io/rest/orgs/{}/projects?target_id={}&version={}&limit=100".format(ORGID, target['id'],SNYKAPIVERSION)
+    while True:
+        projectReponse = session.get(allProjectsUrl, headers={'Authorization': APIKEY})
+        projectReponse.raise_for_status()
+        projectReponseJSON = projectReponse.json()
+        listofProjects.extend(projectReponseJSON['data'])
+        nextPageProjectURL = projectReponseJSON['links'].get('next')
+        if not nextPageProjectURL:
+            break
+        allProjectsUrl = "https://api.snyk.io{}".format(nextPageProjectURL)
+
+
     hasGradle = False
     hasMaven = False
 
-    for project in projectResponseJSON['data']:
+    for project in listofProjects:
 
         if project['attributes']['type'].lower() == "gradle":
             hasGradle = True
@@ -60,8 +74,12 @@ for target in listofTargets:
             print("has maven")        
 
         if hasGradle & hasMaven:
-            print(project)
             count = count + 1
+            hasBoth.append(target)
+            break
 
+
+for project in hasBoth:
+    print(project)
 
 print("Total targets with at least 1 maven and 1 gradle project: {}".format(count))
