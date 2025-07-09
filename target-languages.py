@@ -41,7 +41,7 @@ except reqs.RequestException as ex:
     print("If this error looks abnormal please check https://status.snyk.io/ for any incidents")
 
 
-#https://api.snyk.io/rest/orgs/2f3d8682-4d92-454d-899f-8acb8eb5704e/projects?target_id=39940beb-94bf-4282-b0d0-efbe448e4f4f&version=2024-10-15
+
 for target in listofTargets:
 
     projectsResponse = session.get("https://api.snyk.io/rest/orgs/{}/projects?target_id={}&version={}&limit=100".format(ORGID, target['id'],SNYKAPIVERSION), headers={'Authorization': APIKEY})
